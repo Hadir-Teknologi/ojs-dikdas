@@ -1,0 +1,42 @@
+name: ojs
+
+services:
+  app:
+    build:
+      context: .
+    image: ojs-dikdas:latest
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ojs_files:/var/www/html/files
+      - ojs_cache:/var/www/html/cache
+      - ojs_registry:/var/www/html/registry
+      - ojs_public:/var/www/html/public
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-ojs}
+      MARIADB_USER: ${DB_USER:-ojs}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-ojs}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - ojs_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  ojs_files:
+  ojs_cache:
+  ojs_registry:
+  ojs_public:
+  ojs_db:
