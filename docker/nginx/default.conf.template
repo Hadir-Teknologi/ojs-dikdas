@@ -1,3 +1,10 @@
+# Proxy di depan container mengakhiri TLS. Teruskan status https ke PHP
+# supaya OJS tahu request aslinya https (penting untuk FORCE_SSL=On).
+map $http_x_forwarded_proto $forwarded_https {
+    default off;
+    https   on;
+}
+
 server {
     listen 80;
     server_name ${APP_DOMAIN};
@@ -16,7 +23,12 @@ server {
     autoindex off;
 
     # File internal OJS tidak boleh diakses langsung
-    location ~ ^/(cache|registry|files|lib/pkp/lib/vendor)/ {
+    location ~ ^/(cache|registry|files)/ {
+        deny all;
+    }
+    # Vendor berisi asset statis yang dipakai UI, tapi PHP-nya tidak boleh
+    # dieksekusi langsung lewat URL.
+    location ~ ^/lib/pkp/lib/vendor/.*\.php$ {
         deny all;
     }
     location ~ /\. {
@@ -43,6 +55,7 @@ server {
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         fastcgi_param PATH_INFO $path_info;
+        fastcgi_param HTTPS $forwarded_https;
         fastcgi_param HTTP_HOST $http_host;
         fastcgi_param HTTP_AUTHORIZATION $http_authorization;
         fastcgi_hide_header X-Powered-By;

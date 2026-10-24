@@ -42,8 +42,15 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Aplikasi hasil stage 1 (sudah termasuk node build output)
 COPY --from=assets /app /var/www/html
 
-RUN composer install --no-dev --no-interaction --no-progress --optimize-autoloader \
-        -d /var/www/html/lib/pkp
+# Tiga project composer terpisah: core, citationStyleLanguage, paypal
+RUN for d in \
+        lib/pkp \
+        plugins/generic/citationStyleLanguage \
+        plugins/paymethod/paypal \
+    ; do \
+        composer install --no-dev --no-interaction --no-progress --optimize-autoloader \
+            -d "/var/www/html/$d" || exit 1; \
+    done
 
 # PHP config
 COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
